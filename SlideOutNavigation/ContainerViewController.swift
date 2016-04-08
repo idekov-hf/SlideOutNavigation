@@ -22,8 +22,15 @@ class ContainerViewController: UIViewController {
     var centerNavigationController: UINavigationController!
     var centerViewController: CenterViewController!
     
-    var currentState: SlideOutState = .BothCollapsed
+    var currentState: SlideOutState = .BothCollapsed {
+        didSet {
+            let shouldShowShadow = currentState != .BothCollapsed
+            showShadowForCenterViewController(shouldShowShadow)
+        }
+    }
+    
     var leftViewController: SidePanelViewController?
+    var rightViewController: SidePanelViewController?
     
     let centerPanelExpandedOffset: CGFloat = 60
     
@@ -59,6 +66,13 @@ extension ContainerViewController: CenterViewControllerDelegate {
     }
     
     func toggleRightPanel() {
+        let notAlreadyExpanded = (currentState != .RightPanelExpanded)
+        
+        if notAlreadyExpanded {
+            addRightPanelViewController()
+        }
+        
+        animateRightPanel(shouldExpand: notAlreadyExpanded)
     }
     
     func addLeftPanelViewController() {
@@ -78,6 +92,12 @@ extension ContainerViewController: CenterViewControllerDelegate {
     }
     
     func addRightPanelViewController() {
+        if (rightViewController == nil) {
+            rightViewController = UIStoryboard.rightViewController()
+            rightViewController!.animals = Animal.allDogs()
+            
+            addChildSidePanelController(rightViewController!)
+        }
     }
     
     func animateLeftPanel(shouldExpand shouldExpand: Bool) {
@@ -95,13 +115,33 @@ extension ContainerViewController: CenterViewControllerDelegate {
         }
     }
     
+    func animateRightPanel(shouldExpand shouldExpand: Bool) {
+        if (shouldExpand) {
+            currentState = .RightPanelExpanded
+            
+            animateCenterPanelXPosition(targetPosition: -CGRectGetWidth(centerNavigationController.view.frame) + centerPanelExpandedOffset)
+        } else {
+            animateCenterPanelXPosition(targetPosition: 0) { _ in
+                self.currentState = .BothCollapsed
+                
+                self.rightViewController!.view.removeFromSuperview()
+                self.rightViewController = nil;
+            }
+        }
+    }
+    
     func animateCenterPanelXPosition(targetPosition targetPosition: CGFloat, completion: ((Bool) -> Void)! = nil) {
         UIView.animateWithDuration(0.5, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0, options: .CurveEaseInOut, animations: {
             self.centerNavigationController.view.frame.origin.x = targetPosition
             }, completion: completion)
     }
     
-    func animateRightPanel(shouldExpand shouldExpand: Bool) {
+    func showShadowForCenterViewController(shouldShowShadow: Bool) {
+        if (shouldShowShadow) {
+            centerNavigationController.view.layer.shadowOpacity = 0.8
+        } else {
+            centerNavigationController.view.layer.shadowOpacity = 0.0
+        }
     }
     
 }
